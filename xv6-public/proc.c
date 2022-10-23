@@ -90,6 +90,7 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->priority = 1;
+  p->ticks = 0;
 
   release(&ptable.lock);
 
@@ -335,8 +336,9 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+    int n_high = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
+      if(p->state != RUNNABLE || p->priority!=1)
         continue;
 
       // Switch to chosen process.  It is the process's job
@@ -345,13 +347,40 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      cprintf("About to run process %s, [pid: %d], [priority: %d]\n", p->name, p->pid, p->priority);
+      // cprintf("About to run process %s, [pid: %d], [priority: %d], [ticks: %d]\n", p->name, p->pid, p->priority, p->ticks);
       swtch(&(c->scheduler), p->context);
       switchkvm();
+      p->ticks++;
+      n_high++;
+      cprintf("Ran process %s, [pid: %d], [priority: %d], [ticks: %d]\n", p->name, p->pid, p->priority, p->ticks);
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
+    }
+
+    // if zero high tasks then run low tasks
+    if (n_high == 0) {
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+        if(p->state != RUNNABLE)
+          continue;
+
+        // Switch to chosen process.  It is the process's job
+        // to release ptable.lock and then reacquire it
+        // before jumping back to us.
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        // cprintf("About to run process %s, [pid: %d], [priority: %d], [ticks: %d]\n", p->name, p->pid, p->priority, p->ticks);
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+        p->ticks++;
+        cprintf("Ran process %s, [pid: %d], [priority: %d], [ticks: %d]\n", p->name, p->pid, p->priority, p->ticks);
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
     }
     release(&ptable.lock);
 
@@ -540,9 +569,9 @@ int
 settickets(int tickets)
 {
   struct proc *curproc = myproc();
-  cprintf("tickets before: %d\n",  curproc->priority);
+  // cprintf("tickets before: %d\n",  curproc->priority);
   curproc->priority = tickets;
-  cprintf("tickets after: %d\n",  curproc->priority);
+  // cprintf("tickets after: %d\n",  curproc->priority);
   return 0;
 }
 
@@ -550,8 +579,19 @@ int
 getpinfo(struct pstat* ps)
 {
   //cprintf("pstat method\n");
-  // for(int i=0; i<NPROC; i++) {
-    
-  // }
+
+  acquire(&ptable.lock);
+  for(int i=0; i<NPROC; i++) {
+    struct proc p = ptable.proc[i];
+    // inuse
+    ps->inuse[i] = (p.state == UNUSED) ? 0 : 1;
+    // pid
+    ps->pid[i] = p.pid;
+    // tickets/priority
+    ps->tickets[i] = p.priority;
+    // ticks
+    ps->ticks[i] = p.ticks;
+  }
+  release(&ptable.lock);
   return 0;
 }
