@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "x86.h"
 #include "syscall.h"
+#include "pstat.h"
 
 // User code makes a system call with INT T_SYSCALL.
 // System call number in %eax.
@@ -69,6 +70,16 @@ argptr(int n, char **pp, int size)
   return 0;
 }
 
+int
+argptr2(int n, struct pstat **ps)
+{
+  int i;
+  if(argint(n, &i) < 0)
+    return -1;
+  *ps = (struct pstat*)i;
+  return 0;
+}
+
 // Fetch the nth word-sized system call argument as a string pointer.
 // Check that the pointer is valid and the string is nul-terminated.
 // (There is no shared writable memory, so the string can't change
@@ -103,6 +114,8 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
+extern int sys_settickets(void);
+extern int sys_getpinfo(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -126,6 +139,8 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_settickets]   sys_settickets,
+[SYS_getpinfo]   sys_getpinfo,
 };
 
 void

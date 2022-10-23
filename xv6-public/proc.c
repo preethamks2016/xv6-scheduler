@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "pstat.h"
 
 struct {
   struct spinlock lock;
@@ -88,6 +89,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->priority = 1;
 
   release(&ptable.lock);
 
@@ -199,6 +201,7 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  np->priority = curproc->priority;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -342,7 +345,7 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      cprintf("About to run process %s, [pid: %d]\n", p->name, p->pid);
+      cprintf("About to run process %s, [pid: %d], [priority: %d]\n", p->name, p->pid, p->priority);
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
@@ -531,4 +534,24 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+int 
+settickets(int tickets)
+{
+  struct proc *curproc = myproc();
+  cprintf("tickets before: %d\n",  curproc->priority);
+  curproc->priority = tickets;
+  cprintf("tickets after: %d\n",  curproc->priority);
+  return 0;
+}
+
+int 
+getpinfo(struct pstat* ps)
+{
+  //cprintf("pstat method\n");
+  // for(int i=0; i<NPROC; i++) {
+    
+  // }
+  return 0;
 }
