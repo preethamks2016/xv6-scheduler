@@ -7,6 +7,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "pstat.h"
+#include "stddef.h"
 
 int
 sys_fork(void)
@@ -97,16 +98,16 @@ sys_settickets(void)
   int tickets;
   if(argint(0, &tickets) < 0 || argint(0, &tickets) > 1)
     return -1;
-
+  if(tickets < 0 || tickets > 1)
+    return -1;
   return settickets(tickets);
 }
 
 int
 sys_getpinfo(void)
 {
-  struct pstat *p;
-  if(argptr2(0, &p) < 0)
-    return -1;
-
+  struct pstat* p = NULL;
+  argptr(0, (void*)&p, sizeof(struct pstat*));
+  if(p==NULL) return -1;
   return getpinfo(p);
 }

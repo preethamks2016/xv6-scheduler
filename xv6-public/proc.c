@@ -203,6 +203,7 @@ fork(void)
   np->parent = curproc;
   *np->tf = *curproc->tf;
   np->priority = curproc->priority;
+  np->ticks = 0;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -352,7 +353,7 @@ scheduler(void)
       switchkvm();
       p->ticks++;
       n_high++;
-      cprintf("Ran process %s, [pid: %d], [priority: %d], [ticks: %d]\n", p->name, p->pid, p->priority, p->ticks);
+      // cprintf("Ran process %s, [pid: %d], [priority: %d], [ticks: %d]\n", p->name, p->pid, p->priority, p->ticks);
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -375,7 +376,7 @@ scheduler(void)
         swtch(&(c->scheduler), p->context);
         switchkvm();
         p->ticks++;
-        cprintf("Ran process %s, [pid: %d], [priority: %d], [ticks: %d]\n", p->name, p->pid, p->priority, p->ticks);
+        // cprintf("Ran process %s, [pid: %d], [priority: %d], [ticks: %d]\n", p->name, p->pid, p->priority, p->ticks);
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
