@@ -3,16 +3,17 @@
 #include "user.h"
 #include "pstat.h"
 
-void spin() {
+int spin() {
   int i = 0;
   int j = 0;
   int k = 0;
-  for (i = 0; i < 1e9; ++i) {
-    for (j = 0; j < 1e9; ++j) {
+  for (i = 0; i < 5000; ++i) {
+    for (j = 0; j < 200000; ++j) {
       k = j % 10;
-      k = k + 1;
+      k += i + 1;
     }
   }
+  return k;
 }
 
 void print(struct pstat *st) {
@@ -53,13 +54,13 @@ main(int argc, char *argv[])
   int pid_low = getpid();
   int lowtickets = 0, hightickets = 1;
 
-  if (settickets(hightickets) != 0) {
+  if (settickets(lowtickets) != 0) {
     printf(1, "XV6_SCHEDULER\t FAILED\n"); 
     exit();
   }
 
   if (fork() == 0) {  	
-    if (settickets(lowtickets) != 0) {
+    if (settickets(hightickets) != 0) {
       printf(1, "XV6_SCHEDULER\t FAILED\n"); 
       exit();
     }
@@ -74,9 +75,8 @@ main(int argc, char *argv[])
         
     printf(1, "\n ****PInfo before**** \n");
     print(&st_before);
-    printf(1,"Spinning...\n");
+    printf(1,"Spinning...%d\n", spin());
 
-    spin();
         
     if (getpinfo(&st_after) != 0) {
       printf(1, "XV6_SCHEDULER\t FAILED\n"); 
@@ -90,7 +90,8 @@ main(int argc, char *argv[])
          
     exit();
   }
-  spin();
+  printf(1,"Spinning...%d\n", spin());
+
   while (wait() > -1);
   exit();
 }

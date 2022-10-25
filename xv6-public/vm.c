@@ -322,7 +322,7 @@ copyuvm(pde_t *pgdir, uint sz)
 
   if((d = setupkvm()) == 0)
     return 0;
-  for(i = 0; i < sz; i += PGSIZE){
+  for(i = PGSIZE; i < sz; i += PGSIZE){
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
@@ -382,6 +382,69 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
     buf += n;
     va = va0 + PGSIZE;
   }
+  return 0;
+}
+
+int mprotect(void *addr, int len)
+{
+  pde_t *pd = myproc()->pgdir;
+  
+  //if no pages 
+  if ( len <= 0 ) return -1;
+
+
+  // cprintf("M protect : proc_size %x\n",  myproc()->sz);
+  // if addr is beyond the size of the processor
+  if ( (uint)addr + (len * PGSIZE) > myproc()->sz) 
+    return -1;
+
+  //do alignment check 
+
+  //round down the address as per page size
+  uint base_addr = PGROUNDDOWN((uint)addr);
+  // cprintf("M protect proc_size : base %x\n",  base_addr);
+
+  // loop through each pages entr
+  //for each addr do a walk and get pte
+  for ( uint a = base_addr ; a < ((uint) addr + len * PGSIZE) ; a += PGSIZE) {
+    pte_t *pte = walkpgdir(pd, (void*) a, 0);
+    *pte = *pte & (~PTE_W);
+  }
+
+  //make sure that the hardware sees the changes by flushing the tlb and reinstall it 
+  lcr3(V2P(pd));
+  return 0;
+}
+
+int munprotect(void *addr, int len)
+{
+  pde_t *pgdir = myproc()->pgdir;
+  // cprintf("M unprotect is called : addr %x pgdir %x len - %d\n", addr , pgdir, len);
+  //if no pages 
+  if ( len <= 0 ) return -1;
+
+
+  // cprintf("M unprotect : proc_size %x\n",  myproc()->sz);
+  // if addr is beyond the size of the processor
+  if ( (uint)addr + (len * PGSIZE) > myproc()->sz) 
+    return -1;
+
+  //do alignment check 
+
+  //round down the address as per page size
+  uint base_addr = PGROUNDDOWN((uint)addr);
+  // cprintf("M unprotect proc_size : base %x\n",  base_addr);
+
+  // loop through each pages entr
+  //for each addr do a walk and get pte
+
+  for ( uint a = base_addr ; a < ((uint) addr + len * PGSIZE) ; a += PGSIZE) {
+    pte_t *pte = walkpgdir(pgdir, (void*) a, 0);
+    *pte = *pte | (PTE_W);
+  }
+
+  //make sure that the hardware sees the changes by flushing the tlb and reinstall it 
+  lcr3(V2P(pgdir));
   return 0;
 }
 

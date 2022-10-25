@@ -111,3 +111,29 @@ sys_getpinfo(void)
   if(p==NULL) return -1;
   return getpinfo(p);
 }
+
+int
+sys_mprotect(void) 
+{
+  struct uint* addr = NULL; 
+  int len ;
+  if(argint(1, &len) < 0) 
+    return -1;
+
+  argptr(0, (void*)&addr, sizeof(struct unint*));
+
+  return mprotect(addr, len);
+}
+
+int
+sys_munprotect(void) 
+{
+  struct uint* addr = NULL; 
+  int len ;
+  if(argint(1, &len) < 0) 
+    return -1;
+
+  argptr(0, (void*)&addr, sizeof(struct unint*));
+
+  return munprotect(addr, len);
+}
